@@ -3,13 +3,12 @@ library(h2o)
 library(openxlsx)
 library(tidyverse)
 library(lubridate)
-library(keras)
 library(zoo)
 library(ggplot2)
 library(forcats)
 
 nrl <- read.xlsx(path, startRow = 2)
-
+nrl_update <- read.xlsx("nrl_updated.xlsx", startRow = 2)
 
 nrl_mod <- nrl %>%
   mutate(Date = as.Date(Date, origin = "1899-12-30"),
