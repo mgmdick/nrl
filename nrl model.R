@@ -1,4 +1,4 @@
-path = "C:\\Users\\Matt\\Downloads\\nrl.xlsx"
+path = "nrl.xlsx"
 library(h2o)
 library(openxlsx)
 library(tidyverse)
