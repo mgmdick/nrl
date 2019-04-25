@@ -7,27 +7,36 @@ library(zoo)
 library(ggplot2)
 library(forcats)
 
-nrl <- read.xlsx(path, startRow = 2)
-nrl_update <- read.xlsx("nrl_updated.xlsx", startRow = 2)
+#nrl <- read.xlsx(path, startRow = 2)
+nrl <- read.xlsx("nrl_updated.xlsx", startRow = 2)
 
-nrl_mod <- nrl %>%
-  mutate(Date = as.Date(Date, origin = "1899-12-30"),
-         Year = year(Date)) %>%
-  mutate(winner = ifelse(Home.Score > Away.Score, "Home", "Away"),
-         odd_pick = ifelse(Home.Odds < Away.Odds, "Home", "Away")) %>%
-  mutate(bookmaker_correct = odd_pick == winner,
-         home_winner = winner == "Home") %>%
-  group_by(Home.Team) %>%
-  summarise(bookie_percent = sum(bookmaker_correct, na.rm =T) / length(bookmaker_correct),
-            always_home = sum(home_winner, na.rm =T) / length(home_winner)) %>%
-  arrange(desc(always_home))
+# nrl_mod <- nrl %>%
+#   mutate(Date = as.Date(Date, origin = "1899-12-30"),
+#          Year = year(Date)) %>%
+#   mutate(winner = ifelse(Home.Score > Away.Score, "Home", "Away"),
+#          odd_pick = ifelse(Home.Odds < Away.Odds, "Home", "Away")) %>%
+#   mutate(bookmaker_correct = odd_pick == winner,
+#          home_winner = winner == "Home") %>%
+#   group_by(Home.Team) %>%
+#   summarise(bookie_percent = sum(bookmaker_correct, na.rm =T) / length(bookmaker_correct),
+#             always_home = sum(home_winner, na.rm =T) / length(home_winner)) %>%
+#   arrange(desc(always_home))
 
 h2o.shutdown()
 h2o.init()
 
-nrl_home <- nrl %>%
+nrl_mod <- nrl %>%
   mutate(Date = as.Date(Date, origin = "1899-12-30"),
-         Year = year(Date)) %>%
+         Time = convertTime(`Kick-off.(local)`),
+         DateTime = ymd_hms(paste(Date, Time)),
+         Year = year(Date),
+         Round = 0)
+
+
+nrl_mod <- bind_rows(get_latest_odds(7), nrl_mod)
+
+nrl_home <- nrl_mod %>%
+  mutate(Year = year(Date)) %>%
   mutate(winner = ifelse(Home.Score > Away.Score, "Home", "Away"),
          odd_pick = ifelse(Home.Odds < Away.Odds, "Home", "Away")) %>%
   mutate(bookmaker_correct = odd_pick == winner,
@@ -48,7 +57,7 @@ nrl_home <- nrl %>%
   mutate(max_home_odds_in_last_3 = rollapply(lead(Home.Odds), width = 3, FUN = min, align = "left", na.pad = T)) %>%
   mutate(max_home_odds_in_last_5 = rollapply(lead(Home.Odds), width= 5, FUN = min, align = "left", na.pad = T)) %>%
   mutate(max_home_odds_in_last_10 = rollapply(lead(Home.Odds), width = 10, FUN = min, align = "left", na.pad = T)) %>%
-  select(Date, Round, Home.Team, Away.Team, Year,play_off_game, Home.Odds, Away.Odds,
+  select(Date, Time, Round, Home.Team, Away.Team, Year,play_off_game, Home.Odds, Away.Odds,
          home_points_conceded_3,
          home_points_total_3,
          home_wins_in_last_1,
@@ -66,9 +75,8 @@ nrl_home <- nrl %>%
          )
 
 
-nrl_away <- nrl %>%
-  mutate(Date = as.Date(Date, origin = "1899-12-30"),
-         Year = year(Date)) %>%
+nrl_away <- nrl_mod %>%
+  mutate(Year = year(Date)) %>%
   mutate(winner = ifelse(Home.Score > Away.Score, "Home", "Away"),
          odd_pick = ifelse(Home.Odds < Away.Odds, "Home", "Away")) %>%
   mutate(bookmaker_correct = odd_pick == winner,
@@ -108,7 +116,6 @@ nrl_df <- nrl_home %>% inner_join(nrl_away, by = c("Date", "Home.Team", "Away.Te
   ungroup() %>%
   mutate(weights = 1)
 
-curr_round = 6
 
 train_df = nrl_df %>% filter(Year < 2019 | (Year == 2019 & Round < curr_round))
 test_df =  nrl_df %>% filter(Year == 2019 & Round == curr_round)
