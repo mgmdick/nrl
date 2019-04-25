@@ -118,7 +118,7 @@ nrl_df <- nrl_home %>% inner_join(nrl_away, by = c("Date", "Home.Team", "Away.Te
 
 
 train_df = nrl_df %>% filter(Year < 2019 | (Year == 2019 & Round < curr_round))
-test_df =  nrl_df %>% filter(Year == 2019 & Round == curr_round)
+test_df =  nrl_df %>% filter(Year == 2019 & Round == curr_round, !is.na(home_wins_in_last_3), !is.na(away_wins_in_last_3))
 train <- as.h2o(train_df)
 valid <- as.h2o(test_df)
 
@@ -133,7 +133,7 @@ h2o.model <- h2o.automl(x, y, training_frame = train, validation_frame = valid, 
 predict(h2o.model, valid)
 test_df$prediction = as.data.frame(predict(h2o.model, valid))$predict
 
-test_df %>% select(Home.Team, Away.Team, prediction)
+test_df %>% select(Date, Home.Team, Away.Team, prediction)
 
 h2o.confusionMatrix(h2o.model@leader, train)
 
