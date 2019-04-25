@@ -14,7 +14,7 @@ if (file.exists(daily_cache_path)) {
   odds <- odds %>% arrange(desc(Date))
   return(odds)
 }
-odds_api_key <- "93cd11e0d1653dbfcf2eab4a6ed72c0f"
+odds_api_key <- ##
 
 url = URLencode(glue::glue('https://api.the-odds-api.com/v3/odds/?sport=rugbyleague_nrl&region=au&mkt=h2h&apiKey={odds_api_key}'))
 
